@@ -165,7 +165,7 @@ export default function App() {
           ref={introRef}
           className={"intro" + (introFade ? " out" : "")}
           style={{ transitionDuration: introFade + "ms" }}
-          src="/intro.mp4"
+          src={import.meta.env.BASE_URL + "intro.mp4"}
           playsInline
           preload="auto"
           onEnded={() => endIntro(2000)}

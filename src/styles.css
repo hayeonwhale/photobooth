@@ -59,11 +59,12 @@ button { font: inherit; }
   position: absolute;
   left: calc((12% + var(--persona-a) * 76%) + (var(--i, 0) * 3%));
   top: calc((18% + var(--persona-b) * 58%) - (var(--i, 0) * 2%));
-  width: calc(3px + var(--persona-c) * 5px);
+  width: calc(3px + var(--persona-c) * 3px + var(--persona-mood) * 4px);
   aspect-ratio: 1;
   border-radius: 50%;
   background: rgba(255, 226, 173, 0.9);
   box-shadow: 0 0 12px rgba(255, 190, 110, 0.8);
+  filter: brightness(calc(0.65 + var(--persona-mood) * 0.9));
   animation: persona-spark calc(1.8s + var(--persona-b) * 2.2s) ease-in-out infinite alternate;
 }
 .persona-effects i:nth-child(1) { --i: 1; animation-delay: -0.2s; }

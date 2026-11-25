@@ -31,6 +31,13 @@ export async function createAudio() {
     volume: -24,
   }).connect(bellFilter);
 
+  const sparkle = new Tone.PolySynth(Tone.Synth, {
+    maxPolyphony: 4,
+    oscillator: { type: "sine" },
+    envelope: { attack: 0.008, decay: 0.28, sustain: 0.02, release: 0.7 },
+    volume: -19,
+  }).connect(reverb);
+
   const gritFilter = new Tone.Filter({ type: "bandpass", frequency: 500, Q: 0.8 }).connect(reverb);
   const grit = new Tone.PolySynth(Tone.Synth, {
     maxPolyphony: 8,
@@ -50,10 +57,13 @@ export async function createAudio() {
   let index = 0;
   let lastVoiced = -Infinity;
   let level = 0;
+  let pitchOffset = 0;
+  let lastSparkleAt = -Infinity;
+  let lastSparkleMood = 0.5;
 
   const voice = (time) => {
     const { roots, chords } = PROGRESSION[mode];
-    const base = KEY + octave * 12;
+    const base = KEY + octave * 12 + pitchOffset;
     const root = base + roots[index];
     pad.releaseAll(time);
     pad.triggerAttack(chords[index].map((i) => hz(base + i)), time, 0.55);
@@ -72,7 +82,7 @@ export async function createAudio() {
   transport.scheduleRepeat((time) => {
     if (Math.random() < 0.35) return;
     const tones = PROGRESSION[mode].chords[index];
-    const note = KEY + octave * 12 + 12 + tones[1 + Math.floor(Math.random() * (tones.length - 1))];
+    const note = KEY + octave * 12 + pitchOffset + 12 + tones[1 + Math.floor(Math.random() * (tones.length - 1))];
     bell.triggerAttackRelease(hz(note), "1m", time, 0.35 + Math.random() * 0.25);
   }, "1m", "1m");
   transport.start();
@@ -86,9 +96,11 @@ export async function createAudio() {
       const profile = p.profile ?? { a: 0.5, b: 0.5, c: 0.5 };
       const nextMode = p.smile > 0.45 ? "major" : p.smile < 0.25 ? "minor" : mode;
       const nextOctave = p.browDown > 0.55 ? -1 : p.browDown < 0.35 ? 0 : octave;
-      if ((nextMode !== mode || nextOctave !== octave) && Tone.now() - lastVoiced > 0.8) {
+      const nextPitchOffset = Math.round((p.mood - 0.5) * 8);
+      if ((nextMode !== mode || nextOctave !== octave || nextPitchOffset !== pitchOffset) && Tone.now() - lastVoiced > 0.8) {
         mode = nextMode;
         octave = nextOctave;
+        pitchOffset = nextPitchOffset;
         voice(Tone.now() + 0.02);
       }
       const r = 0.1;
@@ -100,8 +112,14 @@ export async function createAudio() {
       gritFilter.frequency.rampTo(350 + p.browDown * 900, r);
       sub.volume.rampTo(-32 + p.browDown * 16, r);
       reverb.roomSize.rampTo(0.55 + p.jawOpen * 0.42 + profile.b * 0.12, r);
-      reverb.wet.rampTo(0.22 + p.jawOpen * 0.55, r);
-      Tone.getTransport().bpm.rampTo(52 + profile.b * 16 + p.smile * 8, r);
+      reverb.wet.rampTo(0.22 + p.jawOpen * 0.4 + p.mood * 0.3, r);
+      Tone.getTransport().bpm.rampTo(52 + profile.b * 16 + p.mood * 8, r);
+      if (Math.abs(p.mood - lastSparkleMood) > 0.13 && Tone.now() - lastSparkleAt > 0.9) {
+        const note = KEY + 24 + pitchOffset + Math.round(p.mood * 7);
+        sparkle.triggerAttackRelease(hz(note), "16n", Tone.now(), 0.25 + p.mood * 0.25);
+        lastSparkleMood = p.mood;
+        lastSparkleAt = Tone.now();
+      }
       master.gain.rampTo(level * (0.6 + 0.4 * p.presence), 0.4);
     },
     shutter(profile = { a: 0.5, b: 0.5, c: 0.5 }) {

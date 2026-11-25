@@ -2,6 +2,7 @@
 
 A browser-based face-reactive photobooth built with React, Vite, MediaPipe, Tone.js, and WebGL.
 Each face gets a subtle personal visual and audio profile, while smile, brow, and jaw expressions shape the live effects.
+Eye- and mouth-corner angles are calibrated per session and gently influence brightness, reverb, pitch, and sparkle chimes; they are expressive cues, not a definitive mood reading.
 
 ## Run
 

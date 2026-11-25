@@ -8,7 +8,7 @@ const FS = `#version 300 es
 precision highp float;
 uniform sampler2D uCam;
 uniform vec2 uRes, uCamRes, uFace;
-uniform float uTime, uWarm, uCool, uOpen, uPresence, uMirror;
+uniform float uTime, uWarm, uCool, uOpen, uMood, uPresence, uMirror;
 uniform vec3 uVariant;
 out vec4 outColor;
 
@@ -66,6 +66,7 @@ void main() {
   col = 1.0 - (1.0 - col) * (1.0 - lightCol * (glow * strength + ring * 0.18));
   col *= mix(vec3(1.0), vec3(1.04, 0.97, 0.9), uWarm * 0.6);
   col *= mix(vec3(1.0), vec3(0.72, 0.8, 0.95), uCool * 0.7);
+  col *= 0.82 + uMood * 0.34;
 
   float scan = 0.94 + 0.06 * sin(gl_FragCoord.y * 3.14159 * 0.5);
   col *= scan;
@@ -128,6 +129,7 @@ export function createLofi(canvas) {
       gl.uniform1f(u.uWarm, p.smile);
       gl.uniform1f(u.uCool, p.browDown);
       gl.uniform1f(u.uOpen, p.jawOpen);
+      gl.uniform1f(u.uMood, p.mood);
       gl.uniform1f(u.uPresence, p.presence);
       gl.uniform3f(u.uVariant, p.profile.a, p.profile.b, p.profile.c);
       gl.drawArrays(gl.TRIANGLES, 0, 3);

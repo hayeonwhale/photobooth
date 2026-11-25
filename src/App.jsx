@@ -153,6 +153,7 @@ export default function App() {
             "--persona-a": status.profile?.a ?? 0.5,
             "--persona-b": status.profile?.b ?? 0.5,
             "--persona-c": status.profile?.c ?? 0.5,
+            "--persona-mood": status.mood ?? 0.5,
           }}
           aria-hidden="true"
         >

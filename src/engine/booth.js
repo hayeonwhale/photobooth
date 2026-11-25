@@ -48,6 +48,7 @@ export function createBooth(canvas, video, { demo = false } = {}) {
       status.mode = audio.mode;
     }
     status.profile = p.profile;
+    status.mood = p.mood;
     portrait = p.profile;
   }
 

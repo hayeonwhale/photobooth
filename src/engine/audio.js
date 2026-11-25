@@ -32,18 +32,21 @@ export async function createAudio() {
   }).connect(bellFilter);
 
   const sparkle = new Tone.PolySynth(Tone.FMSynth, {
-    maxPolyphony: 8,
+    maxPolyphony: 12,
     harmonicity: 5,
     modulationIndex: 10,
     oscillator: { type: "sine" },
     envelope: { attack: 0.004, decay: 0.35, sustain: 0.03, release: 1.2 },
-    volume: -21,
+    volume: -23,
   }).connect(reverb);
 
-  const guitar = new Tone.PluckSynth({
-    attackNoise: 1.4,
-    dampening: 3600,
-    resonance: 0.92,
+  const celesta = new Tone.PolySynth(Tone.FMSynth, {
+    maxPolyphony: 8,
+    harmonicity: 5,
+    modulationIndex: 4,
+    oscillator: { type: "sine" },
+    envelope: { attack: 0.035, decay: 0.7, sustain: 0.08, release: 2.2 },
+    volume: -23,
   }).connect(reverb);
   const strings = new Tone.PolySynth(Tone.Synth, {
     maxPolyphony: 12,
@@ -76,7 +79,7 @@ export async function createAudio() {
   let lastSparkleAt = -Infinity;
   let lastSparkleMood = 0.5;
   let expression = { smile: 0, browDown: 0, jawOpen: 0, mood: 0.5 };
-  let guitarStep = 0;
+  let celestaStep = 0;
   let sparkleStep = 0;
   const melody = {
     major: [0, 2, 4, 7, 9, 7, 4, 2],
@@ -110,14 +113,14 @@ export async function createAudio() {
     bell.triggerAttackRelease(hz(note), "1m", time, 0.35 + Math.random() * 0.25);
   }, "1m", "1m");
   transport.scheduleRepeat((time) => {
-    const chance = 0.16 + expression.mood * 0.22 + expression.smile * 0.46;
+    const chance = 0.48 + expression.mood * 0.14 + expression.smile * 0.16;
     if (Math.random() > chance) return;
-    const note = KEY + octave * 12 + facePitchOffset + pitchOffset + 12 + melody[mode][guitarStep % melody[mode].length];
-    guitar.triggerAttack(hz(note), time);
-    guitarStep++;
+    const note = KEY + octave * 12 + facePitchOffset + pitchOffset + 19 + melody[mode][celestaStep % melody[mode].length];
+    celesta.triggerAttackRelease(hz(note), "8n", time, 0.24 + expression.mood * 0.16);
+    celestaStep++;
   }, "4n");
   transport.scheduleRepeat((time) => {
-    const chance = 0.3 + expression.mood * 0.18 + expression.smile * 0.32;
+    const chance = 0.68 + expression.mood * 0.12 + expression.smile * 0.12;
     if (Math.random() > chance) return;
     const note = KEY + octave * 12 + facePitchOffset + pitchOffset + 24 + melody[mode][sparkleStep % melody[mode].length];
     sparkle.triggerAttackRelease(hz(note), "8n", time, 0.22 + expression.mood * 0.22);

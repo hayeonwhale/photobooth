@@ -12,6 +12,8 @@ npm run dev
 
 Open `http://localhost:5173`. Camera access requires localhost or HTTPS.
 
+Live demo: https://hayeonwhale.github.io/photobooth/
+
 ## Build
 
 ```bash

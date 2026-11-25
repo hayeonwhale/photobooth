@@ -83,6 +83,7 @@ export async function createAudio() {
       return mode;
     },
     update(p) {
+      const profile = p.profile ?? { a: 0.5, b: 0.5, c: 0.5 };
       const nextMode = p.smile > 0.45 ? "major" : p.smile < 0.25 ? "minor" : mode;
       const nextOctave = p.browDown > 0.55 ? -1 : p.browDown < 0.35 ? 0 : octave;
       if ((nextMode !== mode || nextOctave !== octave) && Tone.now() - lastVoiced > 0.8) {
@@ -92,22 +93,23 @@ export async function createAudio() {
       }
       const r = 0.1;
       const bright = Math.pow(p.smile, 1.2);
-      filter.frequency.rampTo(Math.max(180, (420 + bright * 3600) * (1 - p.browDown * 0.5)), r);
-      bellFilter.frequency.rampTo(1200 + bright * 4000, r);
+      filter.frequency.rampTo(Math.max(180, (420 + bright * 3600 + profile.a * 900) * (1 - p.browDown * 0.5)), r);
+      bellFilter.frequency.rampTo(1200 + bright * 4000 + profile.c * 1600, r);
       pad.volume.rampTo(-16 + bright * 3, r);
       grit.volume.rampTo(p.browDown < 0.04 ? -80 : -42 + p.browDown * 24, r);
       gritFilter.frequency.rampTo(350 + p.browDown * 900, r);
       sub.volume.rampTo(-32 + p.browDown * 16, r);
-      reverb.roomSize.rampTo(0.55 + p.jawOpen * 0.42, r);
+      reverb.roomSize.rampTo(0.55 + p.jawOpen * 0.42 + profile.b * 0.12, r);
       reverb.wet.rampTo(0.22 + p.jawOpen * 0.55, r);
+      Tone.getTransport().bpm.rampTo(52 + profile.b * 16 + p.smile * 8, r);
       master.gain.rampTo(level * (0.6 + 0.4 * p.presence), 0.4);
     },
-    shutter() {
+    shutter(profile = { a: 0.5, b: 0.5, c: 0.5 }) {
       const t = Tone.now();
-      shutter.triggerAttackRelease(0.04, t, 0.8);
-      clack.triggerAttackRelease(180, 0.05, t + 0.005, 0.5);
-      shutter.triggerAttackRelease(0.03, t + 0.075, 0.5);
-      clack.triggerAttackRelease(140, 0.05, t + 0.08, 0.35);
+      shutter.triggerAttackRelease(0.025 + profile.a * 0.035, t, 0.65 + profile.c * 0.25);
+      clack.triggerAttackRelease(150 + profile.b * 80, 0.05, t + 0.005, 0.42 + profile.a * 0.18);
+      shutter.triggerAttackRelease(0.02 + profile.c * 0.025, t + 0.075, 0.4);
+      clack.triggerAttackRelease(120 + profile.c * 70, 0.05, t + 0.08, 0.25 + profile.b * 0.2);
     },
     setLevel(v) {
       level = v;

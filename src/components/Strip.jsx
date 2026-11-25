@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { verdictLabel } from "../verify.js";
 
 const HAND_FONT = '"Caveat", "Nanum Pen Script", cursive';
 
@@ -8,9 +7,7 @@ function stamp() {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const current = (verdict, caption) => (verdict && verdict.text === caption.trim() ? verdict : null);
-
-async function exportStrip(shots, captions, verdicts, tilts) {
+async function exportStrip(shots, captions, tilts) {
   await Promise.all([document.fonts.load('56px "Caveat"'), document.fonts.load('56px "Nanum Pen Script"'), document.fonts.load('30px "VT323"')]);
   const images = await Promise.all(
     shots.map((src) => new Promise((resolve) => {
@@ -47,27 +44,10 @@ async function exportStrip(shots, captions, verdicts, tilts) {
     ctx.strokeStyle = "rgba(0,0,0,0.25)";
     ctx.strokeRect(-fw / 2, -fh / 2, fw, fh);
     ctx.restore();
-    const verdict = current(verdicts[i], captions[i]);
-    let stampW = 0;
-    if (verdict && !verdict.pending) {
-      const label = verdictLabel(verdict).toUpperCase();
-      ctx.save();
-      ctx.font = '28px "VT323", monospace';
-      stampW = ctx.measureText(label).width + 20;
-      ctx.translate(W - pad - stampW / 2, y + fh + capH / 2);
-      ctx.rotate(-0.05);
-      ctx.strokeStyle = ctx.fillStyle = token(verdict.error ? "--ink-faint" : "--verify-ink");
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-stampW / 2, -17, stampW, 34);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, 0, 1);
-      ctx.restore();
-    }
     ctx.fillStyle = token("--ink");
     ctx.font = `52px ${HAND_FONT}`;
     ctx.textBaseline = "middle";
-    ctx.fillText(captions[i], pad + 4, y + fh + capH / 2, fw - 8 - (stampW ? stampW + 12 : 0));
+    ctx.fillText(captions[i], pad + 4, y + fh + capH / 2, fw - 8);
   });
   ctx.font = '30px "VT323", monospace';
   ctx.fillStyle = token("--ink-faint");
@@ -82,19 +62,16 @@ async function exportStrip(shots, captions, verdicts, tilts) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-export default function Strip({ shots, captions, verdicts, verifying, onCaption, onVerify, onRetake, onRestart }) {
+export default function Strip({ shots, captions, onCaption, onRetake, onRestart }) {
   const tilts = useMemo(() => shots.map(() => [(Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 5]), [shots]);
-  const hasText = captions.some((c) => c.trim());
 
   return (
     <div className="strip-view">
       <div className="strip">
         {shots.map((src, i) => {
-          const verdict = current(verdicts[i], captions[i]);
           return (
             <div className="cell" key={src.slice(-32) + i}>
               <img src={src} alt={`shot ${i + 1}`} style={{ transform: `rotate(${tilts[i][0]}deg) translateX(${tilts[i][1]}px)` }} />
-              {verdict && <span className={"verdict" + (verdict.error ? " failed" : "") + (verdict.pending ? " pending" : "")}>{verdictLabel(verdict)}</span>}
               <input value={captions[i]} maxLength={80} autoFocus={i === 0} onChange={(e) => onCaption(i, e.target.value)} aria-label={`caption ${i + 1}`} />
             </div>
           );
@@ -102,8 +79,7 @@ export default function Strip({ shots, captions, verdicts, verifying, onCaption,
         <div className="strip-foot">{stamp()}</div>
       </div>
       <div className="strip-actions">
-        <button className="pill" onClick={() => exportStrip(shots, captions, verdicts, tilts)}>SAVE STRIP</button>
-        <button className="pill ghost" onClick={onVerify} disabled={verifying || !hasText}>{verifying ? "VERIFYING…" : "VERIFY AS HUMAN-WRITTEN"}</button>
+        <button className="pill" onClick={() => exportStrip(shots, captions, tilts)}>SAVE STRIP</button>
         <button className="pill ghost" onClick={onRetake}>RETAKE LAST · R</button>
         <button className="pill ghost" onClick={onRestart}>START OVER</button>
       </div>

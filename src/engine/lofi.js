@@ -9,6 +9,7 @@ precision highp float;
 uniform sampler2D uCam;
 uniform vec2 uRes, uCamRes, uFace;
 uniform float uTime, uWarm, uCool, uOpen, uPresence, uMirror;
+uniform vec3 uVariant;
 out vec4 outColor;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -32,7 +33,7 @@ void main() {
   float line = floor(uv.y * lines);
   uv.y = (line + 0.5) / lines;
 
-  float jitter = (noise1(line * 0.35 + uTime * 9.0) - 0.5) * 0.0016;
+  float jitter = (noise1(line * 0.35 + uTime * (7.0 + uVariant.z * 5.0)) - 0.5) * (0.0012 + uVariant.x * 0.0014);
   float band = smoothstep(0.035, 0.0, abs(uv.y - fract(uTime * 0.045))) * 0.006;
   uv.x += jitter + band;
 
@@ -58,6 +59,8 @@ void main() {
 
   vec3 warmLight = vec3(1.0, 0.62, 0.32);
   vec3 coolLight = vec3(0.45, 0.62, 1.0);
+  warmLight = mix(warmLight, vec3(1.0, 0.72, 0.42), uVariant.x);
+  coolLight = mix(coolLight, vec3(0.38, 0.72, 0.82), uVariant.z);
   vec3 lightCol = mix(mix(vec3(1.0, 0.9, 0.8), warmLight, uWarm), coolLight, uCool * (1.0 - 0.5 * uWarm));
   float strength = 0.08 + uWarm * 0.32 + uOpen * 0.2;
   col = 1.0 - (1.0 - col) * (1.0 - lightCol * (glow * strength + ring * 0.18));
@@ -67,7 +70,7 @@ void main() {
   float scan = 0.94 + 0.06 * sin(gl_FragCoord.y * 3.14159 * 0.5);
   col *= scan;
   float grain = hash(gl_FragCoord.xy * 0.73 + fract(uTime * 37.0) * 113.0) - 0.5;
-  col += grain * 0.09;
+  col += grain * (0.065 + uVariant.b * 0.08);
   vec2 v = gl_FragCoord.xy / uRes - 0.5;
   col *= 1.0 - smoothstep(0.35, 0.85, length(v * vec2(aspect * 0.8, 1.0))) * (0.55 + uCool * 0.25);
 
@@ -126,6 +129,7 @@ export function createLofi(canvas) {
       gl.uniform1f(u.uCool, p.browDown);
       gl.uniform1f(u.uOpen, p.jawOpen);
       gl.uniform1f(u.uPresence, p.presence);
+      gl.uniform3f(u.uVariant, p.profile.a, p.profile.b, p.profile.c);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       return true;
     },

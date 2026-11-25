@@ -16,6 +16,7 @@ export function createBooth(canvas, video, { demo = false } = {}) {
   let pending = [];
   let last = performance.now();
   let lastAudio = 0;
+  let portrait = { a: 0.5, b: 0.5, c: 0.5 };
 
   createTracker(video)
     .then((t) => {
@@ -46,6 +47,8 @@ export function createBooth(canvas, video, { demo = false } = {}) {
       audio.update(p);
       status.mode = audio.mode;
     }
+    status.profile = p.profile;
+    portrait = p.profile;
   }
 
   const applyLevel = () => audio?.setLevel(rendering ? level : level * 0.25);
@@ -78,7 +81,7 @@ export function createBooth(canvas, video, { demo = false } = {}) {
       requestAnimationFrame(loop);
     },
     capture() {
-      audio?.shutter();
+      audio?.shutter(portrait);
       return new Promise((resolve) => pending.push(resolve));
     },
     setLevel(v) {

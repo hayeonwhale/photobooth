@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createBooth } from "./engine/booth.js";
-import { verifyCaption } from "./verify.js";
 import Strip from "./components/Strip.jsx";
 
 const SHOTS = 4;
@@ -22,8 +21,6 @@ export default function App() {
   const [camError, setCamError] = useState("");
   const [shots, setShots] = useState([]);
   const [captions, setCaptions] = useState(Array(SHOTS).fill(""));
-  const [verdicts, setVerdicts] = useState(Array(SHOTS).fill(null));
-  const [verifying, setVerifying] = useState(false);
   const [status, setStatus] = useState({});
   const [flash, setFlash] = useState(0);
 
@@ -100,29 +97,8 @@ export default function App() {
     clearTimeout(stripTimer.current);
     updateShots([]);
     setCaptions(Array(SHOTS).fill(""));
-    setVerdicts(Array(SHOTS).fill(null));
     boothRef.current.setLive(true);
     setPhase("booth");
-  };
-
-  const verify = async () => {
-    const snapshot = captions.map((c) => c.trim());
-    setVerifying(true);
-    setVerdicts(snapshot.map((text) => (text ? { text, pending: true } : null)));
-    await Promise.all(
-      snapshot.map(async (text, i) => {
-        if (!text) return;
-        let verdict;
-        try {
-          verdict = { text, human: await verifyCaption(text) };
-        } catch (e) {
-          console.warn("verify failed:", e.message);
-          verdict = { text, error: true };
-        }
-        setVerdicts((v) => v.map((x, j) => (j === i ? verdict : x)));
-      }),
-    );
-    setVerifying(false);
   };
 
   useEffect(() => {
@@ -170,6 +146,20 @@ export default function App() {
         </div>
       )}
 
+      {phase === "booth" && status.face && (
+        <div
+          className="persona-effects"
+          style={{
+            "--persona-a": status.profile?.a ?? 0.5,
+            "--persona-b": status.profile?.b ?? 0.5,
+            "--persona-c": status.profile?.c ?? 0.5,
+          }}
+          aria-hidden="true"
+        >
+          {Array.from({ length: 10 }, (_, i) => <i key={i} />)}
+        </div>
+      )}
+
       {!introGone && (
         <video
           ref={introRef}
@@ -188,7 +178,7 @@ export default function App() {
         <div className="gate begin">
           <div className="gate-inner">
             <button className="pill" onClick={begin} autoFocus>CLICK TO BEGIN</button>
-            <p className="note">Your video and photos stay on this device. Only caption text is sent if you press Verify.</p>
+            <p className="note">Your video and photos stay on this device.</p>
           </div>
         </div>
       )}
@@ -199,10 +189,7 @@ export default function App() {
         <Strip
           shots={shots}
           captions={captions}
-          verdicts={verdicts}
-          verifying={verifying}
           onCaption={(i, v) => setCaptions((c) => c.map((x, j) => (j === i ? v : x)))}
-          onVerify={verify}
           onRetake={retake}
           onRestart={restart}
         />

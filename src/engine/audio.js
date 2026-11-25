@@ -11,54 +11,52 @@ export async function createAudio() {
   await Tone.start();
 
   const master = new Tone.Gain(0).connect(new Tone.Limiter(-2).toDestination());
-  const bus = new Tone.Compressor(-22, 3).connect(master);
-  const reverb = new Tone.Freeverb({ roomSize: 0.6, dampening: 3000, wet: 0.3 }).connect(bus);
-  const chorus = new Tone.Chorus({ frequency: 0.3, delayTime: 4.5, depth: 0.5, wet: 0.5 }).start().connect(reverb);
-  const filter = new Tone.Filter({ type: "lowpass", frequency: 700, Q: 0.5, rolloff: -24 }).connect(chorus);
+  const bus = master;
+  const ambience = new Tone.FeedbackDelay({ delayTime: 0.34, feedback: 0.12, wet: 0.22 }).connect(bus);
+  const filter = new Tone.Filter({ type: "lowpass", frequency: 700, Q: 0.5, rolloff: -24 }).connect(ambience);
 
   const pad = new Tone.PolySynth(Tone.Synth, {
-    maxPolyphony: 16,
-    oscillator: { type: "fattriangle", count: 3, spread: 18 },
+    maxPolyphony: 8,
+    oscillator: { type: "triangle" },
     envelope: { attack: 2, decay: 1, sustain: 0.85, release: 4 },
     volume: -16,
   }).connect(filter);
 
-  const bellFilter = new Tone.Filter({ type: "lowpass", frequency: 2500 }).connect(reverb);
+  const bellFilter = new Tone.Filter({ type: "lowpass", frequency: 2500 }).connect(ambience);
   const bell = new Tone.PolySynth(Tone.Synth, {
-    maxPolyphony: 6,
+    maxPolyphony: 4,
     oscillator: { type: "sine" },
     envelope: { attack: 1.4, decay: 2, sustain: 0.5, release: 5 },
     volume: -24,
   }).connect(bellFilter);
 
   const sparkle = new Tone.PolySynth(Tone.FMSynth, {
-    maxPolyphony: 12,
+    maxPolyphony: 4,
     harmonicity: 5,
     modulationIndex: 10,
     oscillator: { type: "sine" },
     envelope: { attack: 0.004, decay: 0.35, sustain: 0.03, release: 1.2 },
     volume: -23,
-  }).connect(reverb);
+  }).connect(ambience);
 
   const celesta = new Tone.PolySynth(Tone.FMSynth, {
-    maxPolyphony: 8,
+    maxPolyphony: 4,
     harmonicity: 5,
     modulationIndex: 4,
     oscillator: { type: "sine" },
     envelope: { attack: 0.035, decay: 0.7, sustain: 0.08, release: 2.2 },
     volume: -23,
-  }).connect(reverb);
+  }).connect(ambience);
   const strings = new Tone.PolySynth(Tone.Synth, {
-    maxPolyphony: 12,
-    oscillator: { type: "fattriangle", count: 4, spread: 28 },
+    maxPolyphony: 4,
+    oscillator: { type: "triangle" },
     envelope: { attack: 2.4, decay: 1.8, sustain: 0.72, release: 5 },
     volume: -27,
-  }).connect(reverb);
+  }).connect(ambience);
 
-  const gritFilter = new Tone.Filter({ type: "bandpass", frequency: 500, Q: 0.8 }).connect(reverb);
-  const grit = new Tone.PolySynth(Tone.Synth, {
-    maxPolyphony: 8,
-    oscillator: { type: "fatsawtooth", count: 2, spread: 40 },
+  const gritFilter = new Tone.Filter({ type: "bandpass", frequency: 500, Q: 0.8 }).connect(ambience);
+  const grit = new Tone.Synth({
+    oscillator: { type: "sine" },
     envelope: { attack: 1, decay: 0.5, sustain: 0.9, release: 2.5 },
     volume: -80,
   }).connect(gritFilter);
@@ -78,6 +76,7 @@ export async function createAudio() {
   let facePitchOffset = 0;
   let lastSparkleAt = -Infinity;
   let lastSparkleMood = 0.5;
+  let lastTempo = 60;
   let expression = { smile: 0, browDown: 0, jawOpen: 0, mood: 0.5 };
   let celestaStep = 0;
   let sparkleStep = 0;
@@ -92,11 +91,11 @@ export async function createAudio() {
     const root = base + roots[index];
     pad.releaseAll(time);
     pad.triggerAttack(chords[index].map((i) => hz(base + i)), time, 0.55);
-    grit.releaseAll(time);
-    grit.triggerAttack([root + 1, root + 6, root + 13].map((m) => hz(m + 0.25)), time, 0.5);
+    grit.triggerRelease(time);
+    grit.triggerAttack(hz(root + 1), time, 0.5);
     sub.triggerAttack(hz(root - 12), time, 0.7);
     strings.releaseAll(time);
-    strings.triggerAttack(chords[index].map((i) => hz(base + i + 12)), time, 0.18 + expression.mood * 0.08);
+    strings.triggerAttack([hz(root + 12), hz(root + 19)], time, 0.18 + expression.mood * 0.08);
     lastVoiced = Tone.now();
   };
 
@@ -163,10 +162,14 @@ export async function createAudio() {
       grit.volume.rampTo(p.browDown < 0.04 ? -80 : -42 + p.browDown * 24, r);
       gritFilter.frequency.rampTo(350 + p.browDown * 900, r);
       sub.volume.rampTo(-32 + p.browDown * 16, r);
-      reverb.roomSize.rampTo(0.25 + identity * 0.62 + p.jawOpen * 0.12, r);
-      reverb.wet.rampTo(0.12 + identity * 0.6 + p.jawOpen * 0.18 + p.mood * 0.1, r);
+      ambience.feedback.rampTo(0.08 + identity * 0.22 + p.jawOpen * 0.08, r);
+      ambience.wet.rampTo(0.12 + identity * 0.42 + p.jawOpen * 0.16 + p.mood * 0.08, r);
       strings.volume.rampTo(-29 + p.mood * 3, r);
-      Tone.getTransport().bpm.rampTo(46 + identity * 56 + p.mood * 6, r);
+      const nextTempo = 46 + identity * 56 + p.mood * 6;
+      if (Math.abs(nextTempo - lastTempo) > 0.5) {
+        Tone.getTransport().bpm.rampTo(nextTempo, 0.25);
+        lastTempo = nextTempo;
+      }
       if (Math.abs(p.mood - lastSparkleMood) > 0.13 && Tone.now() - lastSparkleAt > 0.9) {
         const note = KEY + 24 + facePitchOffset + pitchOffset + Math.round(p.mood * 7);
         sparkle.triggerAttackRelease(hz(note), "16n", Tone.now(), 0.25 + p.mood * 0.25);

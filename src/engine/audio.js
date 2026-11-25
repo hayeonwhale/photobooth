@@ -132,6 +132,9 @@ export async function createAudio() {
     get mode() {
       return mode;
     },
+    resume() {
+      return Tone.start();
+    },
     update(p) {
       const profile = p.profile ?? { a: 0.5, b: 0.5, c: 0.5 };
       expression = { smile: p.smile, browDown: p.browDown, jawOpen: p.jawOpen, mood: p.mood };

@@ -64,6 +64,11 @@ export function createBooth(canvas, video, { demo = false } = {}) {
   return {
     status,
     ensureAudio() {
+      if (audio) {
+        return audio.resume().catch((e) => {
+          console.error("Could not resume audio:", e);
+        });
+      }
       audioPromise ??= createAudio()
         .then((a) => {
           audio = a;

@@ -38,6 +38,19 @@ export async function createAudio() {
     volume: -19,
   }).connect(reverb);
 
+  const guitar = new Tone.PluckSynth({
+    attackNoise: 1.4,
+    dampening: 3600,
+    resonance: 0.92,
+  }).connect(reverb);
+  const piano = new Tone.PolySynth(Tone.FMSynth, {
+    maxPolyphony: 4,
+    harmonicity: 3,
+    modulationIndex: 2,
+    envelope: { attack: 0.015, decay: 0.35, sustain: 0.08, release: 1.2 },
+    volume: -22,
+  }).connect(reverb);
+
   const gritFilter = new Tone.Filter({ type: "bandpass", frequency: 500, Q: 0.8 }).connect(reverb);
   const grit = new Tone.PolySynth(Tone.Synth, {
     maxPolyphony: 8,
@@ -60,6 +73,13 @@ export async function createAudio() {
   let pitchOffset = 0;
   let lastSparkleAt = -Infinity;
   let lastSparkleMood = 0.5;
+  let expression = { smile: 0, browDown: 0, jawOpen: 0, mood: 0.5 };
+  let guitarStep = 0;
+  let pianoStep = 0;
+  const melody = {
+    major: [0, 2, 4, 7, 9, 7, 4, 2],
+    minor: [0, 2, 3, 7, 8, 7, 3, 2],
+  };
 
   const voice = (time) => {
     const { roots, chords } = PROGRESSION[mode];
@@ -85,6 +105,20 @@ export async function createAudio() {
     const note = KEY + octave * 12 + pitchOffset + 12 + tones[1 + Math.floor(Math.random() * (tones.length - 1))];
     bell.triggerAttackRelease(hz(note), "1m", time, 0.35 + Math.random() * 0.25);
   }, "1m", "1m");
+  transport.scheduleRepeat((time) => {
+    const chance = 0.16 + expression.mood * 0.22 + expression.smile * 0.46;
+    if (Math.random() > chance) return;
+    const note = KEY + octave * 12 + pitchOffset + 12 + melody[mode][guitarStep % melody[mode].length];
+    guitar.triggerAttack(hz(note), time);
+    guitarStep++;
+  }, "4n");
+  transport.scheduleRepeat((time) => {
+    const chance = 0.1 + expression.jawOpen * 0.36 + expression.browDown * 0.12 + Math.max(0, expression.mood - 0.5) * 0.35;
+    if (Math.random() > chance) return;
+    const note = KEY + octave * 12 + pitchOffset + 24 + melody[mode][pianoStep % melody[mode].length];
+    piano.triggerAttackRelease(hz(note), "2n", time, 0.3 + expression.mood * 0.2);
+    pianoStep++;
+  }, "2n");
   transport.start();
   voice(Tone.now() + 0.05);
 
@@ -94,6 +128,7 @@ export async function createAudio() {
     },
     update(p) {
       const profile = p.profile ?? { a: 0.5, b: 0.5, c: 0.5 };
+      expression = { smile: p.smile, browDown: p.browDown, jawOpen: p.jawOpen, mood: p.mood };
       const nextMode = p.smile > 0.45 ? "major" : p.smile < 0.25 ? "minor" : mode;
       const nextOctave = p.browDown > 0.55 ? -1 : p.browDown < 0.35 ? 0 : octave;
       const nextPitchOffset = Math.round((p.mood - 0.5) * 8);

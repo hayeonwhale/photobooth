@@ -7,8 +7,9 @@ void main() {
 const FS = `#version 300 es
 precision highp float;
 uniform sampler2D uCam;
-uniform vec2 uRes, uCamRes, uFace;
+uniform vec2 uRes, uCamRes, uFace, uPoint;
 uniform float uTime, uWarm, uCool, uOpen, uMood, uPresence, uMirror;
+uniform float uPointing;
 uniform vec3 uVariant;
 out vec4 outColor;
 
@@ -28,23 +29,24 @@ const mat3 toYIQ = mat3(0.299, 0.596, 0.211, 0.587, -0.274, -0.523, 0.114, -0.32
 const mat3 toRGB = mat3(1.0, 1.0, 1.0, 0.956, -0.272, -1.106, 0.621, -0.647, 1.703);
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / uRes;
+  vec2 screenUv = gl_FragCoord.xy / uRes;
+  vec2 uv = screenUv;
   float lines = 300.0;
   float line = floor(uv.y * lines);
   uv.y = (line + 0.5) / lines;
 
-  float jitter = (noise1(line * 0.35 + uTime * (7.0 + uVariant.z * 5.0)) - 0.5) * (0.0012 + uVariant.x * 0.0014);
-  float band = smoothstep(0.035, 0.0, abs(uv.y - fract(uTime * 0.045))) * 0.006;
+  float jitter = (noise1(line * 0.35 + uTime * (7.0 + uVariant.z * 5.0)) - 0.5) * (0.0006 + uVariant.x * 0.0007);
+  float band = smoothstep(0.035, 0.0, abs(uv.y - fract(uTime * 0.045))) * 0.003;
   uv.x += jitter + band;
 
-  float px = 1.0 / 320.0;
+  float px = 1.0 / 420.0;
   float y = 0.0;
   for (int i = -2; i <= 2; i++) y += (toYIQ * cam(uv + vec2(float(i) * px, 0.0))).x * (i == 0 ? 0.4 : (abs(i) == 1 ? 0.2 : 0.1));
   vec2 iq = vec2(0.0);
   for (int i = -3; i <= 3; i++) iq += (toYIQ * cam(uv + vec2((float(i) * 2.5 - 3.0) * px, 0.0))).yz;
   iq /= 7.0;
 
-  iq *= 0.78;
+  iq *= 0.55;
   iq += vec2(0.018, -0.012);
   vec3 col = toRGB * vec3(y, iq);
   col = col * 0.88 + 0.055;
@@ -68,12 +70,19 @@ void main() {
   col *= mix(vec3(1.0), vec3(0.72, 0.8, 0.95), uCool * 0.7);
   col *= 0.82 + uMood * 0.34;
 
-  float scan = 0.94 + 0.06 * sin(gl_FragCoord.y * 3.14159 * 0.5);
+  float scan = 0.975 + 0.025 * sin(gl_FragCoord.y * 3.14159 * 0.5);
   col *= scan;
   float grain = hash(gl_FragCoord.xy * 0.73 + fract(uTime * 37.0) * 113.0) - 0.5;
-  col += grain * (0.065 + uVariant.b * 0.08);
+  col += grain * (0.025 + uVariant.b * 0.02);
   vec2 v = gl_FragCoord.xy / uRes - 0.5;
   col *= 1.0 - smoothstep(0.35, 0.85, length(v * vec2(aspect * 0.8, 1.0))) * (0.55 + uCool * 0.25);
+
+  vec2 point = (vec2(uPoint.x, 1.0 - uPoint.y) - 0.5) / coverScale() + 0.5;
+  vec2 focusDelta = (screenUv - point) * vec2(aspect, 1.0);
+  float focus = 1.0 - smoothstep(0.06, 0.14, length(focusDelta));
+  vec3 sharp = cam(screenUv);
+  sharp = clamp((sharp - 0.5) * 1.08 + 0.5, 0.0, 1.0);
+  col = mix(col, sharp, focus * uPointing);
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
@@ -124,6 +133,7 @@ export function createLofi(canvas) {
       gl.uniform2f(u.uRes, canvas.width, canvas.height);
       gl.uniform2f(u.uCamRes, video.videoWidth, video.videoHeight);
       gl.uniform2f(u.uFace, mirror ? 1 - p.faceX : p.faceX, p.faceY);
+      gl.uniform2f(u.uPoint, mirror ? 1 - p.pointX : p.pointX, p.pointY);
       gl.uniform1f(u.uMirror, mirror ? 1 : 0);
       gl.uniform1f(u.uTime, time);
       gl.uniform1f(u.uWarm, p.smile);
@@ -131,6 +141,7 @@ export function createLofi(canvas) {
       gl.uniform1f(u.uOpen, p.jawOpen);
       gl.uniform1f(u.uMood, p.mood);
       gl.uniform1f(u.uPresence, p.presence);
+      gl.uniform1f(u.uPointing, p.pointing);
       gl.uniform3f(u.uVariant, p.profile.a, p.profile.b, p.profile.c);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       return true;

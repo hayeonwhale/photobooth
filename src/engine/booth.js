@@ -5,7 +5,7 @@ import { createLofi } from "./lofi.js";
 
 export function createBooth(canvas, video, { demo = false } = {}) {
   const lofi = createLofi(canvas);
-  const features = createFeatures();
+  const features = createFeatures(video);
   const status = { face: false, mode: "minor", audio: false, model: "loading" };
   let tracker = null;
   let audio = null;
@@ -33,6 +33,7 @@ export function createBooth(canvas, video, { demo = false } = {}) {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const res = tracker?.detect(now);
+    if (res) features.setPointing(res.pointing);
     if (res?.face) features.ingest(res.shapes, res.landmarks);
     else if (res) features.lost();
     if (res) status.face = res.face;
@@ -49,6 +50,7 @@ export function createBooth(canvas, video, { demo = false } = {}) {
     }
     status.profile = p.profile;
     status.mood = p.mood;
+    status.pointing = p.pointing;
     portrait = p.profile;
   }
 

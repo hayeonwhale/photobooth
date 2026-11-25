@@ -48,6 +48,8 @@ button { font: inherit; }
 @keyframes flash { 0% { opacity: 0.85; } 100% { opacity: 0; } }
 
 .persona-effects {
+  --star-hue: 42deg;
+  --star-speed: 2.4s;
   position: fixed;
   z-index: 4;
   inset: 0;
@@ -61,10 +63,10 @@ button { font: inherit; }
   top: calc((18% + var(--persona-b) * 58%) - (var(--i, 0) * 2%));
   width: calc(8px + var(--persona-c) * 4px + var(--persona-mood) * 10px);
   aspect-ratio: 1;
-  background: hsl(calc(38 + var(--persona-mood) * 26) 100% 82%);
+  background: hsl(var(--star-hue) 100% 82%);
   clip-path: polygon(50% 0, 61% 38%, 100% 50%, 61% 62%, 50% 100%, 39% 62%, 0 50%, 39% 38%);
   filter: drop-shadow(0 0 4px rgba(255, 234, 181, 0.9)) drop-shadow(0 0 12px rgba(255, 188, 105, 0.8));
-  animation: persona-spark calc(1.4s + var(--persona-b) * 1.8s) ease-in-out infinite;
+  animation: persona-spark var(--star-speed) ease-in-out infinite;
 }
 .persona-effects i:nth-child(1) { --i: 1; animation-delay: -0.2s; }
 .persona-effects i:nth-child(2) { --i: 2; animation-delay: -1.1s; left: calc(18% + var(--persona-c) * 64%); }
@@ -83,8 +85,8 @@ button { font: inherit; }
 .persona-effects i:nth-child(15) { --i: 15; animation-delay: -0.6s; left: 67%; top: 82%; }
 .persona-effects i:nth-child(16) { --i: 16; animation-delay: -1.5s; left: 5%; top: 72%; }
 .persona-effects i:nth-child(4n + 1) { width: calc(15px + var(--persona-mood) * 12px); }
-.persona-effects i:nth-child(3n + 2) { background: #e4d8ff; }
-.persona-effects i:nth-child(3n) { background: #fff7da; }
+.persona-effects i:nth-child(3n + 2) { background: hsl(calc(var(--star-hue) + 38deg) 88% 86%); }
+.persona-effects i:nth-child(3n) { background: hsl(calc(var(--star-hue) - 25deg) 100% 88%); }
 @keyframes persona-spark {
   0% { opacity: 0.12; transform: translate3d(0, 12px, 0) scale(0.35) rotate(0deg); }
   45% { opacity: 0.95; transform: translate3d(0, 0, 0) scale(1) rotate(45deg); }

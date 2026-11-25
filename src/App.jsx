@@ -133,7 +133,7 @@ export default function App() {
           <div className="osd tl"><span className="rec" />{Math.min(shots.length + 1, SHOTS)}/{SHOTS}</div>
           <div className="osd tr">{DEMO ? "DEMO " : ""}{faceLabel}</div>
           <div className="osd bl"><span><kbd>SPACE</kbd>SHUTTER</span><span><kbd>R</kbd>RETAKE</span></div>
-          <div className="osd br">{status.audio ? "" : "CLICK FOR SOUND"}</div>
+          <div className="osd br">{status.pointing > 0.6 ? "FOCUS" : "POINT TO FOCUS"}{status.audio ? "" : " · CLICK FOR SOUND"}</div>
         </div>
       )}
 
@@ -154,10 +154,12 @@ export default function App() {
             "--persona-b": status.profile?.b ?? 0.5,
             "--persona-c": status.profile?.c ?? 0.5,
             "--persona-mood": status.mood ?? 0.5,
+            "--star-hue": `${(status.profile?.starHue ?? 42) + ((status.mood ?? 0.5) - 0.5) * 26}deg`,
+            "--star-speed": `${status.profile?.starSpeed ?? 2.4}s`,
           }}
           aria-hidden="true"
         >
-          {Array.from({ length: 16 }, (_, i) => <i key={i} />)}
+          {Array.from({ length: status.profile?.starCount ?? 16 }, (_, i) => <i key={i} />)}
         </div>
       )}
 

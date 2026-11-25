@@ -44,11 +44,17 @@ export async function createAudio() {
     resonance: 0.92,
   }).connect(reverb);
   const piano = new Tone.PolySynth(Tone.FMSynth, {
-    maxPolyphony: 4,
+    maxPolyphony: 6,
     harmonicity: 3,
-    modulationIndex: 2,
-    envelope: { attack: 0.015, decay: 0.35, sustain: 0.08, release: 1.2 },
-    volume: -22,
+    modulationIndex: 1.2,
+    envelope: { attack: 0.45, decay: 1.8, sustain: 0.48, release: 3.8 },
+    volume: -26,
+  }).connect(reverb);
+  const strings = new Tone.PolySynth(Tone.Synth, {
+    maxPolyphony: 12,
+    oscillator: { type: "fattriangle", count: 4, spread: 28 },
+    envelope: { attack: 2.4, decay: 1.8, sustain: 0.72, release: 5 },
+    volume: -27,
   }).connect(reverb);
 
   const gritFilter = new Tone.Filter({ type: "bandpass", frequency: 500, Q: 0.8 }).connect(reverb);
@@ -90,6 +96,8 @@ export async function createAudio() {
     grit.releaseAll(time);
     grit.triggerAttack([root + 1, root + 6, root + 13].map((m) => hz(m + 0.25)), time, 0.5);
     sub.triggerAttack(hz(root - 12), time, 0.7);
+    strings.releaseAll(time);
+    strings.triggerAttack(chords[index].map((i) => hz(base + i + 12)), time, 0.18 + expression.mood * 0.08);
     lastVoiced = Tone.now();
   };
 
@@ -113,10 +121,8 @@ export async function createAudio() {
     guitarStep++;
   }, "4n");
   transport.scheduleRepeat((time) => {
-    const chance = 0.1 + expression.jawOpen * 0.36 + expression.browDown * 0.12 + Math.max(0, expression.mood - 0.5) * 0.35;
-    if (Math.random() > chance) return;
     const note = KEY + octave * 12 + pitchOffset + 24 + melody[mode][pianoStep % melody[mode].length];
-    piano.triggerAttackRelease(hz(note), "2n", time, 0.3 + expression.mood * 0.2);
+    piano.triggerAttackRelease(hz(note), "1m", time, 0.18 + expression.mood * 0.12 + expression.jawOpen * 0.05);
     pianoStep++;
   }, "2n");
   transport.start();
@@ -148,6 +154,7 @@ export async function createAudio() {
       sub.volume.rampTo(-32 + p.browDown * 16, r);
       reverb.roomSize.rampTo(0.55 + p.jawOpen * 0.42 + profile.b * 0.12, r);
       reverb.wet.rampTo(0.22 + p.jawOpen * 0.4 + p.mood * 0.3, r);
+      strings.volume.rampTo(-29 + p.mood * 3, r);
       Tone.getTransport().bpm.rampTo(52 + profile.b * 16 + p.mood * 8, r);
       if (Math.abs(p.mood - lastSparkleMood) > 0.13 && Tone.now() - lastSparkleAt > 0.9) {
         const note = KEY + 24 + pitchOffset + Math.round(p.mood * 7);

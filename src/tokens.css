@@ -1,0 +1,31 @@
+/* Design tokens. Swap these values for the Paper export; components read only from here. */
+:root {
+  --bg: #0a0a0a;
+  --fg: #f2efe6;
+  --fg-dim: rgba(242, 239, 230, 0.55);
+  --fg-faint: rgba(242, 239, 230, 0.22);
+  --line: rgba(242, 239, 230, 0.85);
+  --rec: #ff3b30;
+  --stamp: #ff8a2a;
+
+  --paper: #f1eadb;
+  --paper-shade: #e2d8c3;
+  --ink: #2b2620;
+  --ink-faint: rgba(43, 38, 32, 0.35);
+  --verify-ink: #b23a28;
+
+  --font-ui: "Helvetica Neue", Inter, Arial, sans-serif;
+  --font-osd: "VT323", "SFMono-Regular", Menlo, monospace;
+  --font-hand: "Caveat", "Nanum Pen Script", cursive;
+
+  --radius-pill: 999px;
+  --stroke: 1.5px;
+  --space-1: 6px;
+  --space-2: 12px;
+  --space-3: 20px;
+  --space-4: 32px;
+  --fs-osd: 20px;
+  --fs-ui: 13px;
+  --fs-hand: 26px;
+  --tracking: 0.08em;
+}

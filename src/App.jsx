@@ -157,7 +157,7 @@ export default function App() {
           }}
           aria-hidden="true"
         >
-          {Array.from({ length: 10 }, (_, i) => <i key={i} />)}
+          {Array.from({ length: 16 }, (_, i) => <i key={i} />)}
         </div>
       )}
 

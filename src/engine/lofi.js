@@ -79,10 +79,16 @@ void main() {
 
   vec2 point = (vec2(uPoint.x, 1.0 - uPoint.y) - 0.5) / coverScale() + 0.5;
   vec2 focusDelta = (screenUv - point) * vec2(aspect, 1.0);
-  float focus = 1.0 - smoothstep(0.06, 0.14, length(focusDelta));
+  float focusDistance = length(focusDelta);
+  float focusRadius = 0.19 + uVariant.z * 0.035;
+  float focus = 1.0 - smoothstep(focusRadius - 0.025, focusRadius + 0.025, focusDistance);
   vec3 sharp = cam(screenUv);
   sharp = clamp((sharp - 0.5) * 1.08 + 0.5, 0.0, 1.0);
+  float luminance = dot(sharp, vec3(0.299, 0.587, 0.114));
+  sharp = vec3(luminance);
   col = mix(col, sharp, focus * uPointing);
+  float focusRing = 1.0 - smoothstep(0.002, 0.006, abs(focusDistance - focusRadius));
+  col = mix(col, vec3(0.96), focusRing * uPointing * (0.55 + 0.2 * sin(uTime * 2.8)));
 
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;

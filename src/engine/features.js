@@ -3,10 +3,16 @@ const avg = (s, a, b) => ((s[a] ?? 0) + (s[b] ?? 0)) / 2;
 
 const RANGE = { smile: 0.6, browDown: 0.45, jawOpen: 0.55 };
 const MAX_BASELINE = { smile: 0.2, browDown: 0.25, jawOpen: 0.15 };
-const TAU = { smile: [0.2, 0.45], browDown: [0.25, 0.5], jawOpen: [0.12, 0.3], mood: [0.25, 0.6], pointing: [0.08, 0.2], presence: [0.3, 1.2] };
+const TAU = {
+  smile: [0.2, 0.45], browDown: [0.25, 0.5], jawOpen: [0.12, 0.3],
+  mood: [0.25, 0.6], pointing: [0.08, 0.2], presence: [0.3, 1.2],
+  headYaw: [0.12, 0.22], headPitch: [0.12, 0.22], headRoll: [0.12, 0.22],
+  eyeLift: [0.16, 0.28], mouthLift: [0.16, 0.28],
+};
 const CALIBRATION_FRAMES = 40;
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const clampSigned = (v) => Math.min(1, Math.max(-1, v));
 const safeProfile = (value) => clamp01((value - 0.35) / 0.3);
 
 const toHsl = ([red, green, blue]) => {
@@ -60,11 +66,14 @@ function sampleAppearance(video, landmarks, faceLengthRatio) {
   const skin = toHsl(skinColors[0].map((_, channel) => skinColors.reduce((sum, color) => sum + color[channel], 0) / skinColors.length));
   const eyeColors = [toHsl(sample(landmarks[468], 3)), toHsl(sample(landmarks[473], 3))];
   const eyeHue = eyeColors.reduce((sum, eye) => sum + (eye.saturation > 0.08 ? eye.hue : 32), 0) / eyeColors.length;
+  const hair = toHsl(sample({ x: forehead.x, y: forehead.y - 0.04 }, 5));
   const shape = clamp01((faceLengthRatio - 1.05) / 0.8);
 
   return {
     skinLightness: skin.lightness,
     eyeHue,
+    hairHue: hair.hue,
+    hairLightness: hair.lightness,
     starHue: (skin.hue * 0.4 + eyeHue * 0.6) % 360,
     starCount: Math.round(12 + shape * 5 + skin.lightness * 5 + (eyeColors[0].saturation + eyeColors[1].saturation)),
     starSpeed: 1.5 + shape * 0.9 + skin.lightness * 0.7,
@@ -72,12 +81,19 @@ function sampleAppearance(video, landmarks, faceLengthRatio) {
 }
 
 export function createFeatures(video) {
-  const raw = { smile: 0, browDown: 0, jawOpen: 0, mood: 0.5, pointing: 0, presence: 0 };
-  const profile = { a: 0.5, b: 0.5, c: 0.5, skinLightness: 0.5, eyeHue: 32, starHue: 42, starCount: 16, starSpeed: 2.4 };
+  const raw = {
+    smile: 0, browDown: 0, jawOpen: 0, mood: 0.5, pointing: 0, presence: 0,
+    headYaw: 0, headPitch: 0, headRoll: 0, eyeLift: 0, mouthLift: 0,
+  };
+  const profile = {
+    a: 0.5, b: 0.5, c: 0.5, skinLightness: 0.5, eyeHue: 32,
+    hairHue: 0, hairLightness: 0.3, starHue: 42, starCount: 16, starSpeed: 2.4,
+  };
   const smooth = { ...raw, faceX: 0.5, faceY: 0.45, pointX: 0.5, pointY: 0.5, profile };
   const baseline = { smile: 0, browDown: 0, jawOpen: 0, mouthLift: 0, eyeLift: 0 };
   const portrait = { eyeSpacing: 0, faceLength: 0, mouthWidth: 0 };
   let profileReady = false;
+  let profileRefreshFrames = 0;
   let calibrated = 0;
   let faceX = 0.5;
   let faceY = 0.45;
@@ -122,6 +138,17 @@ export function createFeatures(video) {
       const faceWidth = dist(landmarks[234], landmarks[454]);
       const faceLength = dist(landmarks[10], landmarks[152]);
       if (faceWidth > 0.001 && faceLength > 0.001) {
+        const leftNoseSpan = dist(landmarks[1], landmarks[234]);
+        const rightNoseSpan = dist(landmarks[1], landmarks[454]);
+        const eyeLineY = (landmarks[33].y + landmarks[263].y) / 2;
+        const faceVerticalSpan = Math.max(0.001, landmarks[152].y - eyeLineY);
+        raw.headYaw = clampSigned(((leftNoseSpan - rightNoseSpan) / (leftNoseSpan + rightNoseSpan)) * 2.5);
+        raw.headPitch = clampSigned((((landmarks[1].y - eyeLineY) / faceVerticalSpan) - 0.42) * 3.5);
+        raw.headRoll = clampSigned(
+          Math.atan2(landmarks[263].y - landmarks[33].y, landmarks[263].x - landmarks[33].x) / (Math.PI / 5),
+        );
+        raw.eyeLift = clampSigned((m.eyeLift - baseline.eyeLift) * 5);
+        raw.mouthLift = clampSigned((m.mouthLift - baseline.mouthLift) * 4);
         const sample = {
           eyeSpacing: dist(landmarks[33], landmarks[263]) / faceWidth,
           faceLength: faceLength / faceWidth,
@@ -140,6 +167,16 @@ export function createFeatures(video) {
             }
             profileReady = true;
           }
+        } else if (++profileRefreshFrames >= 60) {
+          profileRefreshFrames = 0;
+          profile.a = safeProfile(sample.eyeSpacing);
+          profile.b = safeProfile(sample.faceLength);
+          profile.c = safeProfile(sample.mouthWidth);
+          try {
+            Object.assign(profile, sampleAppearance(video, landmarks, sample.faceLength) ?? {});
+          } catch (error) {
+            console.warn("Could not refresh local appearance colors:", error);
+          }
         }
       }
     },
@@ -153,6 +190,7 @@ export function createFeatures(video) {
     lost() {
       raw.smile = raw.browDown = raw.jawOpen = raw.presence = 0;
       raw.mood = 0.5;
+      raw.headYaw = raw.headPitch = raw.headRoll = raw.eyeLift = raw.mouthLift = 0;
     },
     step(dt) {
       for (const k in TAU) {

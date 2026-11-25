@@ -43,7 +43,7 @@ export function createBooth(canvas, video, { demo = false } = {}) {
       pending.forEach((resolve) => resolve(url));
       pending = [];
     }
-    if (audio && now - lastAudio > 33) {
+    if (audio && now - lastAudio > 100) {
       lastAudio = now;
       audio.update(p);
       status.mode = audio.mode;
@@ -51,6 +51,11 @@ export function createBooth(canvas, video, { demo = false } = {}) {
     status.profile = p.profile;
     status.mood = p.mood;
     status.pointing = p.pointing;
+    status.headYaw = p.headYaw;
+    status.headPitch = p.headPitch;
+    status.headRoll = p.headRoll;
+    status.eyeLift = p.eyeLift;
+    status.mouthLift = p.mouthLift;
     portrait = p.profile;
   }
 

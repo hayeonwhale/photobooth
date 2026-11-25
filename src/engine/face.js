@@ -35,13 +35,16 @@ export async function createTracker(video) {
   }
 
   let lastVideoTime = -1;
+  let lastDetectionAt = -Infinity;
   let lastHandTime = -Infinity;
   let pointing = null;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   return {
     detect(now) {
       if (video.readyState < 2 || video.currentTime === lastVideoTime) return null;
+      if (now - lastDetectionAt < 50) return null;
       lastVideoTime = video.currentTime;
+      lastDetectionAt = now;
       const res = landmarker.detectForVideo(video, now);
       if (hands && now - lastHandTime > 80) {
         lastHandTime = now;

@@ -121,6 +121,10 @@ export default function App() {
   }, [phase, endIntro, shoot, retake]);
 
   const faceLabel = status.model === "loading" ? "LOADING" : status.model === "error" ? "NO TRACKING" : status.face ? "" : "NO FACE";
+  const profile = status.profile ?? {};
+  const geometryWidth = 54 + (profile.a ?? 0.5) * 82;
+  const geometryHeight = 48 + (profile.b ?? 0.5) * 74;
+  const geometryRotation = (status.headRoll ?? 0) * 15 + (status.headYaw ?? 0) * 8 + (status.eyeLift ?? 0) * 5 + (status.mouthLift ?? 0) * 5;
 
   return (
     <>
@@ -150,16 +154,42 @@ export default function App() {
         <div
           className="persona-effects"
           style={{
-            "--persona-a": status.profile?.a ?? 0.5,
-            "--persona-b": status.profile?.b ?? 0.5,
-            "--persona-c": status.profile?.c ?? 0.5,
+            "--persona-a": profile.a ?? 0.5,
+            "--persona-b": profile.b ?? 0.5,
+            "--persona-c": profile.c ?? 0.5,
             "--persona-mood": status.mood ?? 0.5,
-            "--star-hue": `${(status.profile?.starHue ?? 42) + ((status.mood ?? 0.5) - 0.5) * 26}deg`,
-            "--star-speed": `${status.profile?.starSpeed ?? 2.4}s`,
+            "--star-hue": `${(profile.starHue ?? 42) + ((status.mood ?? 0.5) - 0.5) * 26}deg`,
+            "--hair-hue": `${profile.hairHue ?? 0}deg`,
+            "--star-speed": `${profile.starSpeed ?? 2.4}s`,
+            "--edge-speed": `${((profile.starSpeed ?? 2.4) * 3).toFixed(1)}s`,
+            "--geometry-rotation": `${geometryRotation}deg`,
+            "--geometry-scale": 1 + Math.abs(status.headPitch ?? 0) * 0.08 + Math.abs(status.mouthLift ?? 0) * 0.04,
+            "--geometry-opacity": 0.12 + Math.abs(status.eyeLift ?? 0) * 0.08 + Math.abs(status.mouthLift ?? 0) * 0.06,
           }}
           aria-hidden="true"
         >
-          {Array.from({ length: status.profile?.starCount ?? 16 }, (_, i) => <i key={i} />)}
+          <svg className="portrait-geometry" viewBox="0 0 1000 750" preserveAspectRatio="none">
+            <defs>
+              <pattern
+                id="portrait-geometry-pattern"
+                width={geometryWidth}
+                height={geometryHeight}
+                patternUnits="userSpaceOnUse"
+                patternTransform={`rotate(${geometryRotation})`}
+              >
+                <path d={`M0 0 L${geometryWidth / 2} ${geometryHeight / 2} L0 ${geometryHeight} M${geometryWidth} 0 L${geometryWidth / 2} ${geometryHeight / 2} L${geometryWidth} ${geometryHeight}`} className="geometry-grid" />
+                <circle cx={geometryWidth / 2} cy={geometryHeight / 2} r={Math.min(geometryWidth, geometryHeight) * (0.12 + (profile.c ?? 0.5) * 0.12)} className="geometry-grid" />
+              </pattern>
+            </defs>
+            <rect width="1000" height="750" fill="url(#portrait-geometry-pattern)" className="geometry-tile" />
+            <g className="geometry-corners">
+              <path d="M22 112 V22 H112 M888 22 H978 V112 M22 638 V728 H112 M888 728 H978 V638" />
+              <path d="M42 126 L126 42 M874 42 L958 126 M42 624 L126 708 M874 708 L958 624" />
+              <polygon points="500,24 520,54 500,84 480,54" />
+              <polygon points="500,666 520,696 500,726 480,696" />
+            </g>
+          </svg>
+          {Array.from({ length: profile.starCount ?? 16 }, (_, i) => <i key={i} />)}
         </div>
       )}
 

@@ -50,6 +50,7 @@ button { font: inherit; }
 .persona-effects {
   --star-hue: 42deg;
   --star-speed: 2.4s;
+  --edge-speed: 7.2s;
   position: fixed;
   z-index: 4;
   inset: 0;
@@ -57,8 +58,55 @@ button { font: inherit; }
   overflow: hidden;
   mix-blend-mode: screen;
 }
+.persona-effects::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 8%,
+    hsl(var(--star-hue) 96% 72% / 0.45) 13% 19%,
+    transparent 24% 42%,
+    hsl(var(--hair-hue) 78% 74% / 0.36) 48% 55%,
+    transparent 60% 78%,
+    hsl(var(--star-hue) 92% 78% / 0.42) 84% 90%,
+    transparent 96% 100%
+  );
+  filter: blur(24px);
+  opacity: 0.68;
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 54%, transparent 61%, #000 74%, #000 100%);
+  mask-image: radial-gradient(ellipse at center, transparent 54%, transparent 61%, #000 74%, #000 100%);
+  animation: persona-edge-wave var(--edge-speed) ease-in-out infinite;
+}
+.portrait-geometry {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+}
+.geometry-grid {
+  fill: none;
+  stroke: hsl(var(--hair-hue) 78% 78% / 0.72);
+  stroke-width: 0.8;
+}
+.geometry-tile { opacity: var(--geometry-opacity); }
+.geometry-corners {
+  fill: none;
+  stroke: hsl(var(--star-hue) 92% 84% / 0.78);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(var(--geometry-scale));
+}
+.geometry-corners polygon {
+  fill: hsl(var(--hair-hue) 82% 78% / 0.16);
+  stroke: hsl(var(--star-hue) 94% 82% / 0.9);
+}
 .persona-effects i {
   position: absolute;
+  z-index: 1;
   left: calc((12% + var(--persona-a) * 76%) + (var(--i, 0) * 3%));
   top: calc((18% + var(--persona-b) * 58%) - (var(--i, 0) * 2%));
   width: calc(8px + var(--persona-c) * 4px + var(--persona-mood) * 10px);
@@ -93,8 +141,13 @@ button { font: inherit; }
   72% { opacity: 0.4; transform: translate3d(0, -8px, 0) scale(0.65) rotate(90deg); }
   100% { opacity: 0.9; transform: translate3d(calc((var(--persona-c) - 0.5) * 38px), -30px, 0) scale(1.25) rotate(135deg); }
 }
+@keyframes persona-edge-wave {
+  0% { opacity: 0.4; transform: rotate(0deg) scale(0.98); }
+  50% { opacity: 0.78; transform: rotate(180deg) scale(1.03); }
+  100% { opacity: 0.48; transform: rotate(360deg) scale(0.98); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .persona-effects i { animation: none; opacity: 0.72; }
+  .persona-effects i, .persona-effects::before { animation: none; opacity: 0.72; }
 }
 
 .strip-view {
